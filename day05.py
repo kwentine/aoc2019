@@ -60,6 +60,33 @@ def run(prog: List[int], inputs: Optional[Tuple[int, ...]] = None) -> None:
             raise RuntimeError(f"Unknown instruction at address {ip}: {mem[ip]}")
     return output
 
+
+def run_async(prog):
+    ip = 0
+    mem = prog[:]
+    while True:
+        op, modes = parse_instruction(mem[ip])
+        if op in (OP_ADD, OP_MUL, OP_EQ, OP_LT):
+            p1, p2 = get_args(ip + 1, modes[:2], mem)
+            mem[mem[ip + 3]] = OP_FUNCS[op](p1, p2)
+            ip += 4
+        elif op == OP_IN:
+            inpt = yield
+            mem[mem[ip + 1]] = inpt 
+            ip += 2
+        elif op == OP_OUT:
+            output = load(modes[0], ip + 1, mem) 
+            yield output
+            ip += 2
+        elif op in (OP_JT, OP_JF):
+            flag, addr = get_args(ip + 1, modes[:2], mem)
+            ip = OP_FUNCS[op](ip, flag, addr)
+        elif op == OP_HALT:
+            return
+        else:
+            raise RuntimeError(f"Unknown instruction at address {ip}: {mem[ip]}")
+
+
 def load(mode: str, addr: int, mem: List[int]) -> int:
     ptr_or_val = mem[addr]
     return ptr_or_val if mode == LOAD_CONST else mem[ptr_or_val]
