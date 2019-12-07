@@ -1,5 +1,5 @@
 """Day 5: Sunny with a Chance of Asteroids"""
-from typing import Sequence, Tuple, List, Callable, Dict
+from typing import Sequence, Tuple, List, Callable, Dict, Optional
 from operator import add, mul, eq, lt
 
 OP_ADD = "01"
@@ -25,9 +25,13 @@ OP_FUNCS = {
 }  # type: Dict[str, Callable[..., int]]
 
 
-def run(prog: List[int]) -> None:
+def run(prog: List[int], inputs: Optional[Tuple[int, ...]] = None) -> None:
     ip = 0
     mem = prog[:]
+    if inputs is None:
+        inputs = ()
+    next_input = 0
+    output = None
     while True:
         op, modes = parse_instruction(mem[ip])
         if op in (OP_ADD, OP_MUL, OP_EQ, OP_LT):
@@ -36,11 +40,16 @@ def run(prog: List[int]) -> None:
             ip += 4
         elif op == OP_IN:
             addr = mem[ip + 1]
-            mem[addr] = int(input("Input  : "))
+            try:
+                inpt = inputs[next_input]
+                next_input += 1
+            except IndexError:
+                inpt = int(input("Input  : "))
+            mem[addr] = inpt 
             ip += 2
         elif op == OP_OUT:
-            p1 = load(modes[0], ip + 1, mem)
-            print("Output :", p1)
+            output = load(modes[0], ip + 1, mem)
+            # print("Output :", output)
             ip += 2
         elif op in (OP_JT, OP_JF):
             flag, addr = get_args(ip + 1, modes[:2], mem)
@@ -49,7 +58,7 @@ def run(prog: List[int]) -> None:
             break
         else:
             raise RuntimeError(f"Unknown instruction at address {ip}: {mem[ip]}")
-
+    return output
 
 def load(mode: str, addr: int, mem: List[int]) -> int:
     ptr_or_val = mem[addr]
