@@ -10,10 +10,11 @@ OP_JT = "05"
 OP_JF = "06"
 OP_LT = "07"
 OP_EQ = "08"
+OP_REBASE = "09"
 OP_HALT = "99"
 LOAD = "0"
 LOAD_CONST = "1"
-
+LOAD_REL = "2"
 
 OP_FUNCS = {
     OP_ADD: add,
@@ -60,40 +61,61 @@ def run(prog: List[int], inputs: Optional[Tuple[int, ...]] = None) -> None:
             raise RuntimeError(f"Unknown instruction at address {ip}: {mem[ip]}")
     return output
 
-
-def run_async(prog):
+# TODO: Cleanup, refactor
+# - Get modes without casting to string
+# - Write a test suite with all provided examples
+EXTRA_MALLOC_FACTOR = 10
+def run_async(prog, extra_malloc=EXTRA_MALLOC_FACTOR):
     ip = 0
+    rel_base = 0
     mem = prog[:]
+    mem += [0] * (len(prog) * extra_malloc)
     while True:
         op, modes = parse_instruction(mem[ip])
         if op in (OP_ADD, OP_MUL, OP_EQ, OP_LT):
-            p1, p2 = get_args(ip + 1, modes[:2], mem)
-            mem[mem[ip + 3]] = OP_FUNCS[op](p1, p2)
+            p1, p2 = get_args(ip + 1, modes[:2], rel_base, mem)
+            w_addr = mem[ip + 3]
+            if modes[2] == LOAD_REL:
+                w_addr += rel_base
+            mem[w_addr] = OP_FUNCS[op](p1, p2)
             ip += 4
         elif op == OP_IN:
             inpt = yield
-            mem[mem[ip + 1]] = inpt 
+            w_addr = mem[ip + 1]
+            if modes[0] == LOAD_REL:
+                w_addr += rel_base
+            mem[w_addr] = inpt 
             ip += 2
         elif op == OP_OUT:
-            output = load(modes[0], ip + 1, mem) 
+            output = load(modes[0], ip + 1, rel_base, mem) 
             yield output
             ip += 2
         elif op in (OP_JT, OP_JF):
-            flag, addr = get_args(ip + 1, modes[:2], mem)
+            flag, addr = get_args(ip + 1, modes[:2], rel_base, mem)
             ip = OP_FUNCS[op](ip, flag, addr)
+        elif op == OP_REBASE:
+            delta = load(modes[0], ip + 1, rel_base, mem)
+            rel_base += delta
+            ip += 2
         elif op == OP_HALT:
             return
         else:
             raise RuntimeError(f"Unknown instruction at address {ip}: {mem[ip]}")
 
 
-def load(mode: str, addr: int, mem: List[int]) -> int:
-    ptr_or_val = mem[addr]
-    return ptr_or_val if mode == LOAD_CONST else mem[ptr_or_val]
+def load(mode, addr, rel_base, mem):
+    param = mem[addr]
+    # Absolute addressing
+    if mode == LOAD:
+        return mem[param]
+    if mode == LOAD_REL:
+        return mem[param + rel_base]
+    if mode == LOAD_CONST:
+        return param
+    raise RuntimeError("Invalid addressing mode for instruction @{addr}: {mode}")
 
-
-def get_args(ip: int, modes: Sequence[str], mem: List[int]) -> Tuple[int, ...]:
-    return tuple(load(m, ip + i, mem) for (i, m) in enumerate(modes))
+def get_args(ip, modes, rel_base, mem):
+    return tuple(load(m, ip + i, rel_base, mem) for (i, m) in enumerate(modes))
 
 
 def parse_instruction(i: int) -> Tuple[str, Tuple[str, ...]]:
