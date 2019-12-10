@@ -20,18 +20,15 @@ def step1():
 
 def step2():
     asteroids = parse_input()
+    asteroids = [(x - 8, y - 16) for (x, y) in asteroids if (x, y) != (8, 16)]
     by_angle = defaultdict(list)
-    for center in asteroids:
-        cx, cy = center
-        for target in asteroids:
-            if target == center:
-                continue
-            tx, ty = target
-            theta = angle(tx - cx, ty - cy)
-            d = dist(tx - cx, ty - cy) 
-            by_angle[theta].append((d, tx, ty))
+    for target in asteroids:
+        x, y = target
+        theta = angle(x, y)
+        d = dist(x, y) 
+        by_angle[theta].append((d, x, y))
     x, y = list(targets(by_angle))[199]
-    return 100 * x + y
+    return 100 * (x + 8) + y + 16
 
 def dist(x, y):
     return x * x + y * y 
