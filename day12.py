@@ -2,13 +2,6 @@
 
 from itertools import combinations
 
-moons = [
-    ([-9, -1, -1], [0] * 3),
-    ([2, 9, 5], [0] * 3),
-    ([10, 18, -12], [0] * 3),
-    ([-6, 15, -7], [0] * 3)
-]
-
 
 def apply_gravity(m1, m2):
     for i in range(3):
@@ -30,11 +23,25 @@ def energy(m):
     pos, v = m
     return sum(abs(x) for x in pos) * sum(abs(x) for x in v)
 
-moon_pairs = combinations(moons, 2)
-for step in range(1000):
-    for (m1, m2) in moon_pairs:
-        apply_gravity(m1, m2)
-    for m in moons:
-        apply_velocity(m)
 
-print(sum(energy(m) for m in moons))
+def step(moons, n):
+    moon_pairs = list(combinations(moons, 2))
+    for _ in range(n):
+        for (m1, m2) in moon_pairs:
+            apply_gravity(m1, m2)
+        for m in moons:
+            apply_velocity(m)
+    return moons
+
+def step1():
+    moons = [
+    ([-9, -1, -1], [0] * 3),
+    ([2, 9, 5], [0] * 3),
+    ([10, 18, -12], [0] * 3),
+    ([-6, 15, -7], [0] * 3)
+    ]
+    step(moons, 1000)
+    print(sum(energy(m) for m in moons))
+
+
+step1()
