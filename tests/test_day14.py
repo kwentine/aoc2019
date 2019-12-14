@@ -1,6 +1,6 @@
 import pytest
 import sys
-from day14 import parse_input, solve
+from day14 import parse_input, solve, solve2
 
 def test_parse_line():
     pass
@@ -141,3 +141,6 @@ def test_solve(s, expected):
     units, reactions = parse_input(s)
     assert solve(units, reactions) == expected 
 
+def test_solve2():
+    units, reactions = parse_input(ex_3)
+    assert solve2(units, reactions, supply=10**12) == 82892753
