@@ -3,6 +3,7 @@ from random import choice
 from copy import deepcopy
 import sys
 from time import sleep
+from dijkstra import steps_to, path_to, find_shortest_paths
 
 NORTH = 1
 SOUTH = 2
@@ -15,6 +16,7 @@ DIRECTIONS = {
     WEST: (-1, 0),
     EAST: (1, 0)
 }
+STEP_TO_COMMAND = {v: k for (k, v) in DIRECTIONS.items()}
 OPPOSITES = {
     NORTH:SOUTH,
     SOUTH:NORTH,
@@ -58,12 +60,13 @@ def guess_input(prev_direction, success):
 H = 50
 W = 100
 
-def display(droid, free_spots, walls, oxygen):
+def display(droid, free_spots, walls, oxygen=None):
     FREE = "\033[1;34m.\033[m"
     WALL = "\033[47m \033[m"
-    DROID = "\033[1;32m\U0001F916\033[m"
+    # DROID = "\033[1;32m\U0001F916\033[m"
+    DROID = "\033[1;32mX\033[m" 
     OXYGEN = "\033[1;31m*\033[m"
-    grid = [[' '] * W for _ in range(H)]
+    grid = [[WALL] * W for _ in range(H)]
     
     try:
         for (x, y) in free_spots:
@@ -78,7 +81,7 @@ def display(droid, free_spots, walls, oxygen):
         grid = "\n".join(''.join(row) for row in grid)
         print(grid)
     except IndexError:
-        pass
+        print(f"Invalid index: {x}, {y}")
 
 
 def drive_robot(interactive=True):
@@ -118,15 +121,71 @@ def drive_robot(interactive=True):
     except StopIteration:
         print('Oxygen not found')
     
-    
 
-if __name__ == "__main__":
-    import tty, termios
-    restore = termios.tcgetattr(sys.stdin)
-    tty.setcbreak(sys.stdin.fileno())
-    try:
-        drive_robot(interactive=False)
-    except StopIteration as e:
-        print(e)
-    finally:
-        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, restore)
+def goto_pos(steps):
+    """Returns machine accepting next step inputs"""
+    machine = run_async(prog)
+    for s in steps:
+        machine.send(None)
+        machine.send(STEP_TO_COMMAND[s])
+    return machine
+
+oxygen = None
+
+def get_neighbors(target, preds):
+    global oxygen
+    steps = steps_to(target, preds)
+    machine = goto_pos(steps)
+    neighbors = []
+    x, y = target
+    for d in COMMANDS:
+        dx, dy = DIRECTIONS[d]
+        machine.send(None)
+        report = machine.send(d)
+        if report == WALL_HIT:
+            continue
+        n = x + dx, y + dy
+        if report == OXYGEN_FOUND:
+            print('Oxygen found at', n)
+            oxygen = n
+        neighbors.append(n)
+        machine.send(None)
+        machine.send(OPPOSITES[d])
+    return neighbors
+
+def explore():
+    preds, _ = find_shortest_paths((50, 25), get_neighbors)
+    display((50, 25), preds, [])
+
+
+def level2():
+    # cached_preds, _ = find_shortest_paths((0,0), get_neighbors)
+    from maze import cached_preds
+    oxygen = (16, 12) 
+    # print('Exploration complete')
+    # print(cached_preds)
+    
+    def get_neighbors_cached(cur, preds):
+        children = [k for (k, v) in cached_preds.items() if v == cur]
+        if cached_preds.get(cur):
+            children.append(cached_preds.get(cur))
+        return children
+    
+    _, dist = find_shortest_paths(oxygen, get_neighbors_cached)
+    print(max(dist.values()))
+        
+        
+
+level2()
+            
+# if __name__ == "__main__":
+#     import tty, termios
+#     restore = termios.tcgetattr(sys.stdin)
+#     tty.setcbreak(sys.stdin.fileno())
+#     try:
+#         drive_robot(interactive=False)
+#     except StopIteration as e:
+#         print(e)
+#     finally:
+#         termios.tcsetattr(sys.stdin, termios.TCSADRAIN, restore)
+
