@@ -125,8 +125,8 @@ def parse_instruction(i: int) -> Tuple[str, Tuple[str, ...]]:
     return op, modes
 
 
-def parse_input() -> List[int]:
-    with open("data/day05.txt") as f:
+def parse_input(day=5) -> List[int]:
+    with open(f"data/day{day:02d}.txt") as f:
         return [int(i) for i in f.read().strip().split(",")]
 
 
