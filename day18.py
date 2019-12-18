@@ -34,6 +34,16 @@ ex5 = """########################
 ###g#h#i################
 ########################"""
 
+ex3_2 = """#############
+#g#f.D#..h#l#
+#F###e#E###.#
+#dCba...BcIJ#
+#####.@.#####
+#nK.L...G...#
+#M###N#H###.#
+#o#m..#i#jk.#
+#############"""
+
 def read_input():
     with open('data/day18.txt') as f:
         return f.read()
@@ -109,15 +119,60 @@ def bfs(s=None):
                 todo.append((nx, ny, nkeys, nd))
     print(seen)
     raise AssertionError("Unreacheable!")
-                            
-                            
-                         
-# if __name__ == "__main__":
-#     bfs()
-                
-            
 
 
+# Definitely too slow, but I tried ^^'
+def bfs4(s=None):
+    objects, grid = parse_input(s or read_input())
+    tot_keys = len([c for c in objects if c.islower()])
+    in_x, in_y = objects['@']
+    for (dx, dy) in (
+            ( 1,  0),
+            (-1,  0),
+            ( 0,  1),
+            ( 0, -1),
+            ( 0,  0)
+    ):
+        grid[in_x + dx, in_y + dy] = "#"
+    display(grid)
+    seen = {(in_x + 1, in_y + 1, in_x + 1, in_y - 1, in_x - 1, in_y + 1, in_x - 1, in_y - 1, tuple())}
+    todo = deque([(in_x + 1, in_y + 1, in_x + 1, in_y - 1, in_x - 1, in_y + 1, in_x - 1, in_y - 1, "", 0)])
+    while todo:
+        x1, y1, x2, y2, x3, y3, x4, y4, keys, d = todo.popleft()
+        t = ((x1, y1), (x2, y2), (x3, y3), (x4, y4))
+        for i in range(4):
+            for (dx, dy) in (
+                    ( 1,  0),
+                    (-1,  0),
+                    ( 0,  1),
+                    ( 0, -1)
+            ):
+                nx, ny = t[i][0] + dx, t[i][1] + dy
+                nd = d + 1
+                nkeys = keys
+                c = grid[nx, ny]
+                if c == "#":
+                    continue
+                if c not in keys:
+                    if c.isupper() and c.lower() not in keys:
+                        continue
+                    if c.islower():
+                        nkeys = keys + c
+                        if len(nkeys) == tot_keys:
+                            return nd, nkeys
+                skeys = tuple(sorted(nkeys))
+                l = list(t)
+                l[i] = (nx, ny)
+                tl = tuple(x for y in l for x in y) + (tuple(skeys) if skeys else ((),))
+                if tl not in seen:
+                    seen.add(tl)
+                    todo.append(tuple(x for y in l for x in y) + (nkeys, nd))
+    print(seen)
+    raise AssertionError("Unreacheable!")
+
+                            
+
+# TODO: Implement BFS with find_closests to implement state transitions
 def find_closests(origin, grid):
     visited = set()
     todo = deque([(0, origin)])
