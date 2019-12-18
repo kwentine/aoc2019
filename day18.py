@@ -1,5 +1,4 @@
-import heapq
-from collections import defaultdict
+from collections import defaultdict, deque
 
 
 ex1 = """#########
@@ -75,6 +74,48 @@ def display(grid):
                 color = "\033[30;40m%s\033[m"
             print(color % grid[(x, y)], end='')
         print()
+
+
+def bfs(s=None):
+    objects, grid = parse_input(s or read_input())
+    tot_keys = len([c for c in objects if c.islower()])
+    in_x, in_y = objects['@']
+    seen = {(in_x, in_y, tuple())}
+    todo = deque([(in_x, in_y, "", 0)])
+    while todo:
+        x, y, keys, d = todo.popleft()
+        for (dx, dy) in (
+                ( 1,  0),
+                (-1,  0),
+                ( 0,  1),
+                ( 0, -1)
+        ):
+            nx, ny = x + dx, y + dy
+            nd = d + 1
+            nkeys = keys
+            c = grid[nx, ny]
+            if c == "#":
+                continue
+            if c not in keys:
+                if c.isupper() and c.lower() not in keys:
+                    continue
+                if c.islower():
+                    nkeys = keys + c
+                    if len(nkeys) == tot_keys:
+                        return nd, nkeys
+            skeys = tuple(sorted(nkeys))
+            if (nx, ny, skeys) not in seen:
+                seen.add((nx, ny, skeys))
+                todo.append((nx, ny, nkeys, nd))
+    print(seen)
+    raise AssertionError("Unreacheable!")
+                            
+                            
+                         
+# if __name__ == "__main__":
+#     bfs()
+                
+            
 
 
 def find_closests(origin, grid):
@@ -280,6 +321,3 @@ def display_unique_deps():
 def level1():
     pass
     
-if __name__ == "__main__":
-    pass
-    # solve_opt(read_input())
