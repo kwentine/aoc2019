@@ -1,5 +1,6 @@
 from utils import get_input, display
 from collections import defaultdict
+import pdb
 import heapq
 DAY = 20
 
@@ -146,31 +147,33 @@ def parse_grid_2(grid):
 
 def dist_2(start, end, portals, grid):
     seen = set()
-    # (dist, level, pos)
-    levels = set()
     todo = [(0, 0, start)]
     while todo:
         d, level, pos = heapq.heappop(todo)
+        if (pos, level) in seen: continue
         assert level >= 0, f"Negative level {level}"
+        assert grid[pos] not in {'', ' ', '#'}
         if pos == end and not level: return d
+        assert (pos, level) not in seen
         seen.add((pos, level))
+        assert (pos, level) in seen
         for new_pos in neighbors(*pos):
             new_level = level
             new_dist = d + 1
-            if new_pos in (start, end) and level: continue
-            if (new_pos, level) in seen: continue
+            # At level > 0, start and end are walls
+            if new_pos == start: continue
+            if new_pos == end and level: continue
+            # At level 0 portals are walls
+            if new_pos in portals and portals[new_pos][1] == -1 and new_level == 0: continue
             c = grid[new_pos]
-            if c == "#":
-                continue
+            if c == "#": continue
+            # We are trying to cross a portal
             if c.isupper():
-                if c in "AZ":
-                    print(f"Visit {c} at level {level}")
-                    continue
+                if pos == start: continue
                 new_pos, incr = portals[pos]
                 new_level += incr
-                levels.add(new_level)
-                if new_level < 0:
-                    continue
+            if (new_pos, new_level) in seen: continue
+            assert (new_level, new_pos) not in seen
             heapq.heappush(todo, (new_dist, new_level, new_pos))
     raise AssertionError("Unreacheable")
 
@@ -183,10 +186,8 @@ def level1():
 
 def level2():
     grid = get_input(20, parse, strip=False)
-    #display(grid, cmap)
     start, end, portals = parse_grid_2(grid)
     return dist_2(start, end, portals, grid)
-
 
 if __name__ == "__main__":
     print(level2())
