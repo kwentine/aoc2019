@@ -2,50 +2,55 @@
 from functools import partial
 from utils import get_input
 
-def deal_new(deck):
-    return list(reversed(deck))
-
-def cut(n, deck):
-    assert abs(n) < len(deck)
-    if n < 0:
-        n = len(deck) + n
-    return deck[n:] + deck[:n]
-
-def deal_incr(step, deck):
-    l = len(deck)
-    res = [0] * l
-    for i in range(len(deck)):
-        res[(i * step) % l] = deck[i]
-    return res
-
 def parse(s):
+    """op -> (a, b) where op : x -> a * x + b"""
     res = []
     for l in s.splitlines():
-        name, arg = l.rsplit(' ', 1)
-        if "new" in name:
-            res.append(deal_new)
-        elif "increment" in name:
-            res.append(partial(deal_incr, int(arg)))
-        elif name == "cut":
-            res.append(partial(cut, int(arg)))
+        descr, arg = l.rsplit(' ', 1)
+        if "new" in descr:
+            op = (-1, -1)
+        elif "increment" in descr:
+            op = (int(arg), 0)
+        elif descr == "cut":
+            op = (1, -1 * int(arg))
         else:
-            raise ValueError(f"Unknown technique: '{name}'")
-    return res                    
-    
+            AssertionError(f"Unknown technique: {l}")
+        res.append(op)
+    return res
 
-def apply_ops(ops, deck_size):
-    deck = list(range(deck_size))
-    for op in ops:
-        deck = op(deck)
-    return deck
+
+def shuffle(a, b, *, deck=None, deck_size=None):
+    assert (deck is not None or deck_size is not None)
+    n = deck_size if deck_size is not None else len(deck)
+    deck = deck if deck is not None else list(range(deck_size))
+    res = [0] * n
+    for i in range(n):
+        res[(i * a + b ) % n] = deck[i]
+    return res
+
+deal_new = lambda deck: shuffle(-1, -1, deck=deck)
+deal_incr = lambda k, deck: shuffle(k, 0, deck=deck)
+cut = lambda k, deck: shuffle(1, -k, deck=deck)
+
+compose = lambda a, b, c, d: (a * c, b * c + d)
         
+def compose_many(ops, deck_size):
+    """Sum of operations as x -> a * x + b [len(deck)]"""
+    a, b = 1, 0
+    for (c, d) in ops:
+        a, b = compose(a, b, c, d)
+    return a % deck_size, b % deck_size
+
+def shuffle_from_spec(spec, deck_size):
+    ops = parse(spec)
+    a, b = compose_many(ops, deck_size)
+    return shuffle(a, b, deck_size=deck_size)
+    
 def level1():
     ops = get_input(22, parse)
-    deck = apply_ops(ops, 10007)
-    for (i, card) in enumerate(deck):
-        if card == 2019: return i
-    else:
-        raise AssertionError("Unreacheable")
+    deck_size = 10007
+    (a, b) = compose_many(ops, deck_size)
+    return (a * 2019 + b) % deck_size
 
 if __name__ == "__main__":
     print(f"{level1()}")
